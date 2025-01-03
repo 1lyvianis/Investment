@@ -167,7 +167,7 @@ def execute_trading_strategy(stock_data, fgi_data, tickers, initial_cash=2000000
     print(f"交易歷程已追加至 {output_file}")
     export_asset_summary(cash, holdings, margin_debt, stock_data, tickers)
 
-# 5. 資產總計表
+
 def export_asset_summary(cash, holdings, margin_debt, stock_data, tickers, initial_cash=2000000, output_file="asset_summary.csv"):
     
 
