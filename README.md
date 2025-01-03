@@ -3,7 +3,7 @@ Investment project
 
 ## Requirements
 - !pip install yfinance
-- 
+  
 - !pip install pandas
 
 
