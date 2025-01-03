@@ -16,6 +16,7 @@ Investment project
 - FGI_invest.py : Main program. Just run this file in whatever python compiler. 
 
 
+## Outputs
 Running FGI_invest.py will generate 
 
 - histort.csv : Trading history
