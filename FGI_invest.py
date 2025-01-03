@@ -39,44 +39,31 @@ def execute_trading_strategy(stock_data, fgi_data, tickers, initial_cash=2000000
             transaction_log = []
 
             # stategic logic
-            if fgi <= 25:  # Extreme Fear -> buy 2 lots no matter what
-                shares = 2  
-                required_cash = close_price * shares * 1000  
-                fee, tax = calculate_transaction_fees(close_price * 1000, shares, "Buy")  # 手續費與稅費
-                total_cost = required_cash + fee  
-                margin_used = 0  
-
-                # cash or marigin?
-                if cash >= total_cost:
-                    buy_shares = shares  
+            if fgi <= 25:  # Extreme Fear -> buy 4 
+                shares = 4 
+                cost = close_price * shares * 1000
+                fee, tax = calculate_transaction_fees(close_price * 1000, shares, "Buy")
+                if cash < cost + fee: # not enough money
+                    continue
                 else:
-                    buy_shares = shares  
-                    margin_used = total_cost - cash  
-                    cash = 0  
-
-                # update cash and holdings
-                cash -= total_cost - margin_used  
-                margin_debt += margin_used  
-                holdings[ticker] += buy_shares  
-
-                
+                    cash -= cost + fee
+                holdings[ticker] += shares
                 transaction_log.append({
                     "台股代碼(名稱)": ticker,
-                    "交易類別": "現股買進" if margin_used == 0 else "現股+融資買進",
+                    "交易類別": "現股買進",
                     "成交價(元)": close_price,
                     "張數": shares,
                     "手續費(張)": fee,
                     "證交稅(元)": tax,
-                    "借券費(元)": 0,  
-                    "融資金額": margin_used,
-                    "收付金額": -(total_cost),
+                    "借券費(元)": 0,
+                    "融資金額": 0,
+                    "收付金額": -(cost + fee),
                     "時間": date.date(),
-                    "市場情緒": "極度恐慌",
-
+                    "市場情緒": "極度恐慌"
                 })
 
-            elif 26 <= fgi <= 44:  # Fear -> buy 1 lot if able
-                shares = 1  
+            elif 26 <= fgi <= 44:  # Fear -> buy 2
+                shares = 2
                 cost = close_price * shares * 1000
                 fee, tax = calculate_transaction_fees(close_price * 1000, shares, "Buy")
                 if cash < cost + fee: # not enough money
@@ -99,8 +86,8 @@ def execute_trading_strategy(stock_data, fgi_data, tickers, initial_cash=2000000
                 })
             elif 45 <= fgi <= 55:  # Neutral -> hold
                  continue
-            elif 56 <= fgi <= 74:  # Greed -> sell 1 lot (1000 shares)
-                shares = min(1, holdings[ticker])  # sell at most 1
+            elif 56 <= fgi <= 74:  # Greed -> sell 2
+                shares = min(2, holdings[ticker])  
                 if shares > 0: # enough share
                     cost = close_price * shares * 1000
                     fee, tax = calculate_transaction_fees(close_price * 1000, shares, "Sell")
@@ -118,46 +105,28 @@ def execute_trading_strategy(stock_data, fgi_data, tickers, initial_cash=2000000
                         "收付金額": cost - fee - tax,
                         "時間": date.date(),
                         "市場情緒": "貪婪"
-
                     })
-            elif 75 <= fgi:  # Extreme Greed -> sell 2 lot no matter what
-                shares = 2  
-                held_shares = holdings[ticker]  
-                borrow_shares = 0  
-
-                # calc sell shares, hold & borrow
-                if held_shares >= shares:
-                    sell_shares = shares  
-                else:
-                    sell_shares = held_shares  
-                    borrow_shares = shares - held_shares  
-
-                # calc transaction cost
-                total_cost = close_price * shares * 1000  
-                fee, tax = calculate_transaction_fees(close_price * 1000, shares, "Sell")  
-                borrow_cost = borrow_shares * close_price * 1000 * 0.001 if borrow_shares > 0 else 0  # rate = 0.1%
-
-                # update cash and holdings
-                cash += total_cost - fee - tax - borrow_cost
-                holdings[ticker] -= sell_shares
-
-                
-                transaction_log.append({
-                    "台股代碼(名稱)": ticker,
-                    "交易類別": "現股賣出" if borrow_shares == 0 else "現股+融券賣出",
-                    "成交價(元)": close_price,
-                    "張數": shares,
-                    "手續費(張)": fee,
-                    "證交稅(元)": tax,
-                    "借券費(元)": borrow_cost,
-                    "融資金額": 0,
-                    "收付金額": total_cost - fee - tax - borrow_cost,
-                    "時間": date.date(),
-                    "市場情緒": "極度貪婪"
-                })
-
-
-            
+            elif 75 <= fgi:  # Extreme Greed -> sell 4 
+                shares = min(4, holdings[ticker])  
+                if shares > 0: # enough share
+                    cost = close_price * shares * 1000
+                    fee, tax = calculate_transaction_fees(close_price * 1000, shares, "Sell")
+                    cash += cost - fee - tax
+                    holdings[ticker] -= shares
+                    transaction_log.append({
+                        "台股代碼(名稱)": ticker,
+                        "交易類別": "現股賣出",
+                        "成交價(元)": close_price,
+                        "張數": shares,
+                        "手續費(張)": fee,
+                        "證交稅(元)": tax,
+                        "借券費(元)": 0,
+                        "融資金額": 0,
+                        "收付金額": cost - fee - tax,
+                        "時間": date.date(),
+                        "市場情緒": "極度貪婪"
+                    })
+     
             if transaction_log:
                 with open(output_file, "a") as f:
                     for log in transaction_log:
@@ -188,9 +157,6 @@ def export_asset_summary(cash, holdings, margin_debt, stock_data, tickers, initi
         )
 
     print(f"資產總計表已輸出至 {output_file}")
-
-
-
 
     # main
 if __name__ == "__main__":
